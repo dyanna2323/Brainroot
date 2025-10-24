@@ -14,6 +14,12 @@ interface PlayerPhysics {
   isGrounded: boolean;
 }
 
+interface TouchControlState {
+  left: boolean;
+  right: boolean;
+  jump: boolean;
+}
+
 interface BrainrotGameState {
   gamePhase: GamePhase;
   currentRound: number;
@@ -28,6 +34,11 @@ interface BrainrotGameState {
   playerPhysics: {
     player1: PlayerPhysics;
     player2: PlayerPhysics;
+  };
+  
+  touchControls: {
+    player1: TouchControlState;
+    player2: TouchControlState;
   };
   
   raceTimer: number;
@@ -56,6 +67,7 @@ interface BrainrotGameState {
   nextCourse: () => void;
   resetToMenu: () => void;
   setPlayerPosition: (player: 1 | 2, position: [number, number, number]) => void;
+  setTouchControl: (player: 1 | 2, control: 'left' | 'right' | 'jump', pressed: boolean) => void;
 }
 
 const initialPlayerState: PlayerState = {
@@ -66,6 +78,12 @@ const initialPlayerState: PlayerState = {
 const initialPlayerPhysics: PlayerPhysics = {
   velocity: [0, 0, 0],
   isGrounded: true
+};
+
+const initialTouchControlState: TouchControlState = {
+  left: false,
+  right: false,
+  jump: false
 };
 
 export const useBrainrotGame = create<BrainrotGameState>()(
@@ -83,6 +101,11 @@ export const useBrainrotGame = create<BrainrotGameState>()(
     playerPhysics: {
       player1: { ...initialPlayerPhysics },
       player2: { ...initialPlayerPhysics }
+    },
+    
+    touchControls: {
+      player1: { ...initialTouchControlState },
+      player2: { ...initialTouchControlState }
     },
     
     raceTimer: 0,
@@ -275,6 +298,10 @@ export const useBrainrotGame = create<BrainrotGameState>()(
           player1: { ...initialPlayerPhysics },
           player2: { ...initialPlayerPhysics }
         },
+        touchControls: {
+          player1: { ...initialTouchControlState },
+          player2: { ...initialTouchControlState }
+        },
         raceTimer: 0,
         checkpoints: {
           player1: [],
@@ -292,6 +319,18 @@ export const useBrainrotGame = create<BrainrotGameState>()(
         [`player${player}`]: {
           ...get()[`player${player}`],
           position
+        }
+      });
+    },
+    
+    setTouchControl: (player, control, pressed) => {
+      set({
+        touchControls: {
+          ...get().touchControls,
+          [`player${player}`]: {
+            ...get().touchControls[`player${player}`],
+            [control]: pressed
+          }
         }
       });
     }
