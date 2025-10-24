@@ -1,4 +1,4 @@
-import { Text } from "@react-three/drei";
+import { Text, Html } from "@react-three/drei";
 import { BrainrotCharacter } from "@/lib/gameData";
 
 interface VotingZoneProps {
@@ -25,17 +25,32 @@ export function VotingZone({ character, position, index, isCorrect, showAnswer }
         />
       </mesh>
       
-      <Text
-        position={[0, 2, 0]}
-        fontSize={1.2}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.1}
-        outlineColor="#000000"
+      <Html
+        position={[0, 2.5, 0]}
+        center
+        distanceFactor={8}
+        transform
+        occlude
       >
-        {character.emoji}
-      </Text>
+        <div style={{
+          background: 'white',
+          borderRadius: '12px',
+          padding: '8px',
+          border: '3px solid #000',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+        }}>
+          <img 
+            src={character.image} 
+            alt={character.name}
+            style={{
+              width: '120px',
+              height: '120px',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+          />
+        </div>
+      </Html>
       
       <Text
         position={[0, 1, 0]}
