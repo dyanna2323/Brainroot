@@ -1,199 +1,198 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { KeyboardControls, useKeyboardControls } from "@react-three/drei";
+import { PerspectiveCamera } from "@react-three/drei";
 import { useBrainrotGame } from "@/lib/stores/useBrainrotGame";
 import { Player } from "./Player";
-import { VotingZone } from "./VotingZone";
-import { SoundButton } from "./SoundButton";
-import { GameArena } from "./GameArena";
+import { ObstacleCourse, getObstacleCourseBounds } from "./ObstacleCourse";
+import TouchControls from "./TouchControls";
+import { createBox, resolveAABBCollision, getBoxFromBounds } from "@/lib/collision";
 import * as THREE from "three";
 
-enum Controls {
-  p1Forward = "p1Forward",
-  p1Back = "p1Back",
-  p1Left = "p1Left",
-  p1Right = "p1Right",
-  p2Forward = "p2Forward",
-  p2Back = "p2Back",
-  p2Left = "p2Left",
-  p2Right = "p2Right"
-}
-
-const keyMap = [
-  { name: Controls.p1Forward, keys: ["KeyW"] },
-  { name: Controls.p1Back, keys: ["KeyS"] },
-  { name: Controls.p1Left, keys: ["KeyA"] },
-  { name: Controls.p1Right, keys: ["KeyD"] },
-  { name: Controls.p2Forward, keys: ["ArrowUp"] },
-  { name: Controls.p2Back, keys: ["ArrowDown"] },
-  { name: Controls.p2Left, keys: ["ArrowLeft"] },
-  { name: Controls.p2Right, keys: ["ArrowRight"] }
-];
-
 function GameScene() {
-  const { 
-    quizRound, 
-    player1, 
-    player2, 
-    setPlayerPosition, 
-    setPlayerVote,
-    phase
-  } = useBrainrotGame();
+  const gamePhase = useBrainrotGame((state) => state.gamePhase);
+  const player1 = useBrainrotGame((state) => state.player1);
+  const player2 = useBrainrotGame((state) => state.player2);
+  const setPlayerPosition = useBrainrotGame((state) => state.setPlayerPosition);
+  const finishRace = useBrainrotGame((state) => state.finishRace);
   
-  const [subscribe, getControls] = useKeyboardControls<Controls>();
-  const currentSoundRef = useRef<HTMLAudioElement | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera>(null);
   
-  const playSound = () => {
-    if (!quizRound || phase !== "playing") return;
-    
-    if (currentSoundRef.current) {
-      currentSoundRef.current.pause();
-      currentSoundRef.current.currentTime = 0;
-    }
-    
-    const audio = new Audio(quizRound.correctCharacter.sound);
-    audio.volume = 0.5;
-    audio.play();
-    currentSoundRef.current = audio;
-    
-    console.log("Playing sound for:", quizRound.correctCharacter.name);
-  };
+  // Get obstacle bounds for collision detection
+  const obstacleBounds = useRef(getObstacleCourseBounds());
   
-  useEffect(() => {
-    console.log("Game phase:", phase);
-    console.log("Player 1 controls: WASD");
-    console.log("Player 2 controls: Arrow Keys");
+  useFrame(() => {
+    if (gamePhase !== "racing") return;
     
-    const unsubscribe = subscribe(
-      (state) => state,
-      (state) => {
-        console.log("Controls state:", state);
-      }
-    );
-    
-    return () => {
-      unsubscribe();
-      if (currentSoundRef.current) {
-        currentSoundRef.current.pause();
-      }
-    };
-  }, [subscribe, phase]);
-  
-  useFrame((state, delta) => {
-    if (phase !== "playing") return;
-    
-    const controls = getControls();
-    const speed = 5 * delta;
-    
+    // Get player positions
     const p1Pos = new THREE.Vector3(...player1.position);
     const p2Pos = new THREE.Vector3(...player2.position);
     
-    if (controls.p1Forward) p1Pos.z -= speed;
-    if (controls.p1Back) p1Pos.z += speed;
-    if (controls.p1Left) p1Pos.x -= speed;
-    if (controls.p1Right) p1Pos.x += speed;
+    // Player box dimensions (matching Player component)
+    const playerSize: [number, number, number] = [1, 2, 1];
     
-    if (controls.p2Forward) p2Pos.z -= speed;
-    if (controls.p2Back) p2Pos.z += speed;
-    if (controls.p2Left) p2Pos.x -= speed;
-    if (controls.p2Right) p2Pos.x += speed;
-    
-    p1Pos.x = THREE.MathUtils.clamp(p1Pos.x, -20, 20);
-    p1Pos.z = THREE.MathUtils.clamp(p1Pos.z, -20, 20);
-    p2Pos.x = THREE.MathUtils.clamp(p2Pos.x, -20, 20);
-    p2Pos.z = THREE.MathUtils.clamp(p2Pos.z, -20, 20);
-    
-    setPlayerPosition(1, [p1Pos.x, p1Pos.y, p1Pos.z]);
-    setPlayerPosition(2, [p2Pos.x, p2Pos.y, p2Pos.z]);
-    
-    if (quizRound) {
-      const votingPositions = [
-        new THREE.Vector3(-6, 0, -8),
-        new THREE.Vector3(0, 0, -8),
-        new THREE.Vector3(6, 0, -8)
-      ];
+    // Helper function to convert obstacle bounds to collision box
+    const getObstacleCollisionBox = (obstacle: any) => {
+      // Handle obstacles with size property (RotatingPlatform, MovingBarrier)
+      if ('size' in obstacle) {
+        return getBoxFromBounds({ position: obstacle.position, size: obstacle.size });
+      }
       
-      let p1Vote: number | null = null;
-      let p2Vote: number | null = null;
+      // For GapJump, create boxes for the two platforms
+      if (obstacle.type === 'gap-jump') {
+        const { position, width, depth, platformLength } = obstacle;
+        // Return both platform boxes (we'll check both)
+        const platform1Pos: [number, number, number] = [
+          position[0] - (width / 2 + platformLength / 2),
+          position[1],
+          position[2]
+        ];
+        const platform2Pos: [number, number, number] = [
+          position[0] + (width / 2 + platformLength / 2),
+          position[1],
+          position[2]
+        ];
+        const platformSize: [number, number, number] = [platformLength, 0.5, depth];
+        return [
+          createBox(platform1Pos, platformSize),
+          createBox(platform2Pos, platformSize)
+        ];
+      }
       
-      votingPositions.forEach((votePos, index) => {
-        const distP1 = p1Pos.distanceTo(votePos);
-        const distP2 = p2Pos.distanceTo(votePos);
+      // For SpinnerHammer, approximate as a box covering rotation area
+      if (obstacle.type === 'spinner-hammer') {
+        const { position, armLength } = obstacle;
+        const size: [number, number, number] = [armLength * 2, 2, armLength * 2];
+        return createBox(position, size);
+      }
+      
+      return null;
+    };
+    
+    // Player 1 collision detection
+    const p1Box = createBox([p1Pos.x, p1Pos.y, p1Pos.z], playerSize);
+    obstacleBounds.current.forEach((obstacle) => {
+      const obstacleBoxes = getObstacleCollisionBox(obstacle);
+      if (!obstacleBoxes) return;
+      
+      // Handle single box or array of boxes
+      const boxArray = Array.isArray(obstacleBoxes) ? obstacleBoxes : [obstacleBoxes];
+      
+      boxArray.forEach((obstacleBox) => {
+        const collision = resolveAABBCollision(p1Box, obstacleBox);
         
-        if (distP1 < 2) p1Vote = index;
-        if (distP2 < 2) p2Vote = index;
+        if (collision.collided && collision.normal && collision.penetration) {
+          // Push player out of obstacle
+          p1Pos.x += collision.normal[0] * collision.penetration;
+          p1Pos.y += collision.normal[1] * collision.penetration;
+          p1Pos.z += collision.normal[2] * collision.penetration;
+          
+          // Update position in store
+          setPlayerPosition(1, [p1Pos.x, p1Pos.y, p1Pos.z]);
+        }
       });
+    });
+    
+    // Player 2 collision detection
+    const p2Box = createBox([p2Pos.x, p2Pos.y, p2Pos.z], playerSize);
+    obstacleBounds.current.forEach((obstacle) => {
+      const obstacleBoxes = getObstacleCollisionBox(obstacle);
+      if (!obstacleBoxes) return;
       
-      if (p1Vote !== player1.currentVote) {
-        setPlayerVote(1, p1Vote);
-        if (p1Vote !== null) {
-          console.log("Player 1 voting for zone:", p1Vote + 1);
-        }
-      }
+      // Handle single box or array of boxes
+      const boxArray = Array.isArray(obstacleBoxes) ? obstacleBoxes : [obstacleBoxes];
       
-      if (p2Vote !== player2.currentVote) {
-        setPlayerVote(2, p2Vote);
-        if (p2Vote !== null) {
-          console.log("Player 2 voting for zone:", p2Vote + 1);
+      boxArray.forEach((obstacleBox) => {
+        const collision = resolveAABBCollision(p2Box, obstacleBox);
+        
+        if (collision.collided && collision.normal && collision.penetration) {
+          // Push player out of obstacle
+          p2Pos.x += collision.normal[0] * collision.penetration;
+          p2Pos.y += collision.normal[1] * collision.penetration;
+          p2Pos.z += collision.normal[2] * collision.penetration;
+          
+          // Update position in store
+          setPlayerPosition(2, [p2Pos.x, p2Pos.y, p2Pos.z]);
         }
-      }
+      });
+    });
+    
+    // Check if players crossed finish line (Z >= 50)
+    if (p1Pos.z >= 50) {
+      finishRace(1);
+    }
+    if (p2Pos.z >= 50) {
+      finishRace(2);
+    }
+    
+    // Update camera to follow the action
+    if (cameraRef.current) {
+      // Calculate average position of both players
+      const avgX = (p1Pos.x + p2Pos.x) / 2;
+      const avgZ = (p1Pos.z + p2Pos.z) / 2;
+      
+      // Position camera to follow players while maintaining good view
+      const targetCameraX = avgX;
+      const targetCameraY = 15;
+      const targetCameraZ = avgZ - 10;
+      
+      // Smooth camera follow
+      cameraRef.current.position.lerp(
+        new THREE.Vector3(targetCameraX, targetCameraY, targetCameraZ),
+        0.05
+      );
+      
+      // Look at point ahead of average player position
+      const lookAtTarget = new THREE.Vector3(avgX, 0, avgZ + 10);
+      const currentLookAt = new THREE.Vector3();
+      cameraRef.current.getWorldDirection(currentLookAt);
+      currentLookAt.multiplyScalar(10).add(cameraRef.current.position);
+      currentLookAt.lerp(lookAtTarget, 0.05);
+      cameraRef.current.lookAt(currentLookAt);
     }
   });
   
-  if (!quizRound) return null;
-  
-  const showAnswer = phase === "roundEnd" || phase === "gameEnd";
-  const correctIndex = quizRound.options.findIndex(
-    opt => opt.id === quizRound.correctCharacter.id
-  );
+  // Only render game elements when racing
+  if (gamePhase !== "racing") return null;
   
   return (
     <>
-      <ambientLight intensity={0.5} />
+      {/* Camera */}
+      <PerspectiveCamera
+        ref={cameraRef}
+        makeDefault
+        position={[0, 15, -10]}
+        fov={75}
+      />
+      
+      {/* Lighting */}
+      <ambientLight intensity={0.6} />
       <directionalLight 
-        position={[10, 10, 5]} 
-        intensity={1}
+        position={[10, 20, 10]} 
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
+        shadow-camera-left={-20}
+        shadow-camera-right={20}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
       />
-      <pointLight position={[0, 5, 0]} intensity={0.5} color="#A855F7" />
-      
-      <GameArena />
-      
-      <VotingZone 
-        character={quizRound.options[0]}
-        position={[-6, 0, -8]}
-        index={0}
-        isCorrect={correctIndex === 0}
-        showAnswer={showAnswer}
-      />
-      <VotingZone 
-        character={quizRound.options[1]}
-        position={[0, 0, -8]}
-        index={1}
-        isCorrect={correctIndex === 1}
-        showAnswer={showAnswer}
-      />
-      <VotingZone 
-        character={quizRound.options[2]}
-        position={[6, 0, -8]}
-        index={2}
-        isCorrect={correctIndex === 2}
-        showAnswer={showAnswer}
+      <directionalLight 
+        position={[-10, 15, -5]} 
+        intensity={0.5}
       />
       
-      <SoundButton position={[0, 0.5, 0]} onPlay={playSound} />
+      {/* Obstacle Course */}
+      <ObstacleCourse />
       
+      {/* Players */}
       <Player 
-        position={player1.position}
-        color="#3B82F6"
-        label="P1"
+        playerNumber={1}
+        startPosition={[-3, 1, 0]}
       />
       <Player 
-        position={player2.position}
-        color="#EF4444"
-        label="P2"
+        playerNumber={2}
+        startPosition={[3, 1, 0]}
       />
     </>
   );
@@ -201,8 +200,9 @@ function GameScene() {
 
 export function Game() {
   return (
-    <KeyboardControls map={keyMap}>
+    <>
       <GameScene />
-    </KeyboardControls>
+      <TouchControls />
+    </>
   );
 }

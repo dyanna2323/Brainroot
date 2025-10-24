@@ -6,18 +6,18 @@ import { GameUI } from "./components/GameUI";
 import { useBrainrotGame } from "./lib/stores/useBrainrotGame";
 
 function App() {
-  const { phase } = useBrainrotGame();
+  const { gamePhase } = useBrainrotGame();
   
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
       <GameUI />
       
-      {(phase === "playing" || phase === "roundEnd") && (
+      {(gamePhase === "countdown" || gamePhase === "racing" || gamePhase === "results") && (
         <Canvas
           shadows
           camera={{
-            position: [0, 12, 15],
-            fov: 60,
+            position: [0, 15, -10],
+            fov: 75,
             near: 0.1,
             far: 1000
           }}
@@ -26,7 +26,7 @@ function App() {
             powerPreference: "default"
           }}
         >
-          <color attach="background" args={["#0F172A"]} />
+          <color attach="background" args={["#87CEEB"]} />
           
           <Suspense fallback={null}>
             <Game />
