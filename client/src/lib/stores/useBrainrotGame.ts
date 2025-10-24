@@ -46,6 +46,7 @@ interface BrainrotGameState {
   resultsTimeoutId: NodeJS.Timeout | null;
   
   // Actions
+  setPhase: (phase: GamePhase) => void;
   selectCharacter: (player: 1 | 2, character: BrainrotCharacter) => void;
   startCountdown: () => void;
   startRace: () => void;
@@ -97,6 +98,10 @@ export const useBrainrotGame = create<BrainrotGameState>()(
     
     countdownTimeoutId: null,
     resultsTimeoutId: null,
+    
+    setPhase: (phase) => {
+      set({ gamePhase: phase });
+    },
     
     selectCharacter: (player, character) => {
       set({
