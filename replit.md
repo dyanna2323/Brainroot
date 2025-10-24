@@ -1,10 +1,21 @@
-# Brainrot Quiz - Two Player Meme Game
+# Brainrot Race - Two Player Mobile Racing Game
 
 ## Overview
 
-Brainrot Quiz is a two-player local multiplayer 3D quiz game where players compete to identify Italian Brainrot meme characters based on audio clues. Players navigate a colorful 3D arena using separate keyboard controls, listen to sound clips, and race to the correct character voting zones to score points. The game features a vibrant meme-themed design with React Three Fiber 3D graphics, a 5-round tournament system, real-time scoring, and playful UI elements.
+Brainrot Race is a Fall Guys-style obstacle course racing game featuring two-player local multiplayer with mobile touch controls. Players select from a roster of quirky Brainrot meme characters and race through challenging 3D obstacle courses with auto-run physics. The game is designed for mobile and tablet devices, with intuitive touch controls for moving left/right and jumping. Players compete across 3 race courses, navigating moving barriers, rotating platforms, spinner hammers, and gap jumps. The first player to cross the finish line in each race earns a point, and the player with the most points after all courses wins. The game features vibrant 3D graphics powered by React Three Fiber, dynamic camera following, and responsive mobile-optimized controls.
 
 ## Recent Changes
+
+**October 24, 2025** - Transformed into Fall Guys-style mobile race game
+- Completely redesigned from quiz game to obstacle course racing
+- Implemented mobile touch controls for both players (left, right, jump buttons)
+- Added auto-run physics with constant forward movement
+- Created obstacle course with 4 obstacle types: MovingBarrier, RotatingPlatform, SpinnerHammer, GapJump
+- Implemented AABB collision detection system for obstacle interactions
+- Added character selection screen with 10 Brainrot meme characters
+- Built 3-race tournament system with countdown and results phases
+- Created dynamic camera system that follows both players during races
+- Designed mobile-friendly UI with touch-optimized buttons and overlays
 
 **October 24, 2025** - Initial MVP Release
 - Implemented complete two-player local quiz game with 3D graphics
@@ -25,12 +36,12 @@ Preferred communication style: Simple, everyday language.
 
 **Framework**: React with TypeScript, built using Vite as the build tool and development server.
 
-**3D Rendering**: The application uses React Three Fiber (@react-three/fiber) as a React renderer for Three.js, enabling declarative 3D scene creation. Additional utilities from @react-three/drei provide helpers for common 3D elements like text, keyboard controls, and camera management. Post-processing effects are available through @react-three/postprocessing.
+**3D Rendering**: The application uses React Three Fiber (@react-three/fiber) as a React renderer for Three.js, enabling declarative 3D scene creation. Additional utilities from @react-three/drei provide helpers for common 3D elements like text, camera management, and 3D primitives. Post-processing effects are available through @react-three/postprocessing.
 
 **UI Components**: The interface uses a comprehensive Radix UI component library for accessible, unstyled primitives, styled with Tailwind CSS. Components include dialogs, buttons, cards, and various form controls. The design system uses CSS custom properties for theming with support for light/dark modes.
 
 **State Management**: Zustand is used for global state management with two main stores:
-- `useBrainrotGame`: Manages game state including phases (menu, playing, roundEnd, gameEnd), player positions, scores, voting, rounds, and timer
+- `useBrainrotGame`: Manages game state including phases (menu, characterSelect, countdown, racing, results), player positions and physics, selected characters, touch control states, race timer, checkpoints, scoring, and winner determination
 - `useGame`: A simpler state manager for basic game phases (ready, playing, ended)
 - `useAudio`: Manages audio playback and mute state for background music and sound effects
 
@@ -72,41 +83,60 @@ Preferred communication style: Simple, everyday language.
 
 ### Game Architecture
 
-**Game Loop**: The game uses a timer-based tick system that decrements `timeRemaining` every second during the "playing" phase. Game state transitions occur through discrete phases (menu → playing → roundEnd → gameEnd).
+**Game Loop**: The game uses a frame-based update loop through React Three Fiber's `useFrame` hook. During the "racing" phase, players move forward automatically at constant speed while the physics system handles velocity, jumping, and landing. The game continuously checks for obstacle collisions using AABB (Axis-Aligned Bounding Box) detection and resolves collisions by pushing players out of obstacles. Finish line detection triggers when a player's Z position reaches 50 or greater. Game state transitions occur through discrete phases (menu → characterSelect → countdown → racing → results).
 
-**Player Controls**: Dual keyboard control scheme using KeyboardControls from @react-three/drei:
-- Player 1: WASD keys
-- Player 2: Arrow keys
+**Player Controls**: Mobile touch control system with separate controls for each player:
+- Player 1 (left side): Left button, Right button, Jump button (blue theme)
+- Player 2 (right side): Left button, Right button, Jump button (red theme)
 
-Players navigate the 3D arena to "vote" by entering character zones, detected through position-based collision logic.
+Players auto-run forward constantly and use touch buttons to move left/right and jump over obstacles. The touch controls are only visible during the racing phase and use `touchstart`/`touchend` events to update the game state. Control state is stored in the Zustand store and accessed by the Player component to apply physics and movement.
 
-**Round System**: Each game consists of 5 rounds. Each round presents a quiz with 3 character options displayed in voting zones, one correct answer, and a 30-second time limit. The game generates new rounds ensuring no character ID is reused across the game session.
+**Round System**: Each game consists of 3 race courses. Before each race, a 3-second countdown prepares players. During racing, players navigate obstacles and compete to reach the finish line first. After someone finishes, a results screen shows the winner for 3 seconds before advancing to the next course or final results.
 
-**Scoring**: Players earn 1 point for each correct answer. The game tracks both total score and correct answer count per player, declaring a winner at the end of 5 rounds.
+**Scoring**: First player to cross the finish line (Z >= 50) wins the race and earns 1 point. The game tracks total score across all 3 courses. After 3 races, the player with the most points is declared the overall winner. Guards prevent double-scoring if both players finish nearly simultaneously.
 
-**Character Data**: Currently features 10 Italian Brainrot meme characters (Tralalero Tralala, Tung Tung Sahur, Cappuccino Assassino, Ballerina Cappucina, Brr Brr Patapim, Pizza Pomodoro, Gelato Magnifico, Spaghetti Confetti, Mozzarella Bella, Risotto Perfetto), each with unique emoji representation and color scheme. Audio clues currently use placeholder sounds from the available sound library.
+**Character Data**: Currently features 10 Brainrot meme characters (Tralalero Tralala, Tung Tung Sahur, Cappuccino Assassino, Ballerina Cappucina, Brr Brr Patapim, Pizza Pomodoro, Gelato Magnifico, Spaghetti Confetti, Mozzarella Bella, Risotto Perfetto), each with unique image representation and color scheme. Characters are purely cosmetic - all have identical racing physics.
+
+**Obstacle System**: The obstacle course features 4 distinct obstacle types:
+- **MovingBarrier**: Barriers that slide left and right, requiring timing to pass
+- **RotatingPlatform**: Platforms that rotate continuously, challenging player positioning
+- **SpinnerHammer**: Large rotating hammers that sweep across the course
+- **GapJump**: Gaps in the track requiring precise jumps to clear
+
+Obstacles are positioned throughout the 50-unit-long course and use AABB collision boxes for interaction detection.
 
 ## Game Components
 
 **Core Game Files:**
-- `client/src/lib/gameData.ts`: Character definitions and round generation logic
-- `client/src/lib/stores/useBrainrotGame.ts`: Main game state management with Zustand
-- `client/src/components/Game.tsx`: Main game scene with controls and voting detection
-- `client/src/components/GameUI.tsx`: UI overlay with menu, HUD, and end screen
-- `client/src/components/Player.tsx`: 3D player character representation
-- `client/src/components/VotingZone.tsx`: Interactive character voting areas
-- `client/src/components/SoundButton.tsx`: Audio playback button
+- `client/src/lib/gameData.ts`: Character definitions with images, names, colors, and emojis
+- `client/src/lib/stores/useBrainrotGame.ts`: Main game state management with Zustand - handles phases, physics, controls, scoring, timers
+- `client/src/lib/collision.ts`: AABB collision detection utilities for obstacle interactions
+- `client/src/components/Game.tsx`: Main game scene with camera system, obstacle collision detection, and finish line logic
+- `client/src/components/GameUI.tsx`: UI overlay with menu, character selection, HUD, countdown, and results screens
+- `client/src/components/Player.tsx`: 3D player character with auto-run physics, jumping, landing, and touch control input
+- `client/src/components/TouchControls.tsx`: Mobile touch button interface for both players
+- `client/src/components/ObstacleCourse.tsx`: 3D obstacle course terrain with all obstacle instances
+- `client/src/components/MovingBarrier.tsx`: Sliding barrier obstacle component
+- `client/src/components/RotatingPlatform.tsx`: Rotating platform obstacle component
+- `client/src/components/SpinnerHammer.tsx`: Rotating hammer obstacle component
+- `client/src/components/GapJump.tsx`: Gap jump obstacle component
 - `client/src/components/GameArena.tsx`: 3D arena floor and grid
+- `client/src/components/CharacterSelect.tsx`: Character selection screen with portrait grid
 
 ## Future Enhancements
 
 Potential features for future development:
-- Cosmetic shop system with unlockable hats and skins using earned points
-- Online multiplayer support for remote players
-- Expanded character roster to 50+ memes
-- Arena shooter mode as alternative gameplay
-- Global leaderboard and player statistics tracking
-- Custom audio recordings for each character's unique sound
+- More obstacle course variety with unique themes (ice, lava, space, jungle)
+- Additional obstacle types (bouncing balls, treadmills, swinging pendulums, disappearing platforms)
+- Mobile-specific optimizations for better touch responsiveness and performance
+- Leaderboard system tracking fastest completion times per course
+- Expanded character roster to 50+ unique Brainrot memes
+- Cosmetic shop system with unlockable hats, trails, and emotes using earned points
+- Online multiplayer support for remote mobile players
+- Power-ups and boost pads for added gameplay variety
+- Custom course editor for player-created obstacle layouts
+- Daily challenges and seasonal events
+- Replay system to watch race highlights
 
 ## External Dependencies
 
@@ -134,4 +164,4 @@ The Vite configuration explicitly supports 3D model formats (GLTF, GLB) and audi
 
 ### Browser APIs
 
-The game relies heavily on Web Audio API for sound playback, WebGL through Three.js for 3D rendering, and standard DOM APIs for keyboard input handling.
+The game relies heavily on WebGL through Three.js for 3D rendering, Touch Events API for mobile input handling, and Web Audio API for sound playback.
