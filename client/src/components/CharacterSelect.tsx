@@ -40,10 +40,10 @@ export function CharacterSelect() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 mb-4 animate-pulse">
-            🏁 CHARACTER SELECT 🏁
+            🏁 ELIGE TU PERSONAJE 🏁
           </h1>
           <p className="text-2xl text-white font-semibold">
-            Choose Your Brainrot Racer!
+            ¡Elige tu personaje para la carrera!
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export function CharacterSelect() {
             <CardContent className="p-6">
               <div className="text-center">
                 <h3 className="text-2xl font-bold text-white mb-2">
-                  PLAYER 1 🔵
+                  JUGADOR 1 🔵
                 </h3>
                 {selectedCharacters.player1 ? (
                   <div className="space-y-2">
@@ -77,8 +77,8 @@ export function CharacterSelect() {
                   </div>
                 ) : (
                   <div className="py-8">
-                    <p className="text-white/60 text-lg">Click to select</p>
-                    <p className="text-white/40 text-sm mt-2">WASD controls</p>
+                    <p className="text-white/60 text-lg">Toca para elegir</p>
+                    <p className="text-white/40 text-sm mt-2">Botones azules</p>
                   </div>
                 )}
               </div>
@@ -97,7 +97,7 @@ export function CharacterSelect() {
             <CardContent className="p-6">
               <div className="text-center">
                 <h3 className="text-2xl font-bold text-white mb-2">
-                  PLAYER 2 🔴
+                  JUGADOR 2 🔴
                 </h3>
                 {selectedCharacters.player2 ? (
                   <div className="space-y-2">
@@ -113,8 +113,8 @@ export function CharacterSelect() {
                   </div>
                 ) : (
                   <div className="py-8">
-                    <p className="text-white/60 text-lg">Click to select</p>
-                    <p className="text-white/40 text-sm mt-2">Arrow keys</p>
+                    <p className="text-white/60 text-lg">Toca para elegir</p>
+                    <p className="text-white/40 text-sm mt-2">Botones rojos</p>
                   </div>
                 )}
               </div>
@@ -129,7 +129,7 @@ export function CharacterSelect() {
               ? 'bg-blue-500 text-white' 
               : 'bg-red-500 text-white'
           }`}>
-            Now Selecting for: {selectingFor === 1 ? 'PLAYER 1 🔵' : 'PLAYER 2 🔴'}
+            Eligiendo para: {selectingFor === 1 ? 'JUGADOR 1 🔵' : 'JUGADOR 2 🔴'}
           </div>
         </div>
 
@@ -196,7 +196,7 @@ export function CharacterSelect() {
                 : 'bg-gray-600 text-gray-400 border-4 border-gray-500 cursor-not-allowed'
             }`}
           >
-            {bothPlayersSelected ? '🏁 START RACE! 🏁' : '⏳ Select Both Players ⏳'}
+            {bothPlayersSelected ? '🏁 ¡EMPEZAR CARRERA! 🏁' : '⏳ Elige los 2 jugadores ⏳'}
           </Button>
         </div>
 
@@ -205,16 +205,16 @@ export function CharacterSelect() {
           <Card className="bg-black/70 border-2 border-yellow-400">
             <CardContent className="p-6">
               <h3 className="text-2xl font-bold text-yellow-400 text-center mb-4">
-                📋 HOW TO SELECT
+                📋 CÓMO ELEGIR
               </h3>
-              <div className="grid md:grid-cols-2 gap-4 text-white">
+              <div className="grid md:grid-cols-2 gap-4 text-white text-lg">
                 <div className="space-y-2">
-                  <p>1️⃣ Click on a player card (blue or red) to choose who you're selecting for</p>
-                  <p>2️⃣ Click on a character to select it for that player</p>
+                  <p>1️⃣ Toca la tarjeta azul o roja para elegir jugador</p>
+                  <p>2️⃣ Toca un personaje para elegirlo</p>
                 </div>
                 <div className="space-y-2">
-                  <p>3️⃣ Both players can choose the same character!</p>
-                  <p>4️⃣ Once both players have selected, click START RACE!</p>
+                  <p>3️⃣ ¡Los 2 pueden elegir el mismo!</p>
+                  <p>4️⃣ Cuando los 2 estén listos, ¡toca empezar!</p>
                 </div>
               </div>
             </CardContent>
